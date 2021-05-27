@@ -1,81 +1,42 @@
 ---
 - hosts: all
-  become: yes
+  roles:
+    - dokku_bot.ansible_dokku
+    # - geerlingguy.swap
   vars:
-    docker_compose_version: "1.29.2"
-
+    # If you are running dokku on a small VPS, you'll most likely
+    # need some swap to ensure you don't run out of RAM during deploys
+    # swap_file_size_mb: '2048'
+    dokku_users:
+      - name: Add ssh key
+        username: caillou
+        ssh_key: "{{lookup('file', '~/.ssh/id_rsa.pub')}}"
+    dokku_plugins:
+    #   - name: clone
+    #     url: https://github.com/crisward/dokku-clone.git
+      - name: letsencrypt
+        url: https://github.com/dokku/dokku-letsencrypt.git
+    dokku_hostname: 'caillou.ch'
   tasks:
-    - name: Update apt cache
-      apt: update_cache=yes cache_valid_time=3600
-
-    - name: Upgrade all apt packages
-      apt: upgrade=dist
-
-    - name: Install dependencies
-      apt:
-        name: "{{ packages }}"
+    - name: create app
+      dokku_app:
+        app: &appname dokku
         state: present
-        update_cache: yes
-      vars:
-        packages:
-        - apt-transport-https
-        - ca-certificates
-        - curl
-        - software-properties-common
-        - gnupg-agent
-
-    - name: Add an apt signing key for Docker
-      apt_key:
-        url: https://download.docker.com/linux/ubuntu/gpg
+    - name: environment configuration
+      dokku_config:
+        app: *appname
+        config:
+          DOKKU_LETSENCRYPT_EMAIL: pierre.spring@caillou.ch
+          PORT: "5000"
+    # - name: Add host with custom SSH port
+    #   known_hosts:
+    #     name: '140.82.121.3' # github.com
+    #     key: '140.82.121.3 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=='
+    #     path: /home/dokku/.ssh/known_hosts
+    #     state: present
+    - name: clone and build once
+      shell: dokku ps:inspect dokku || dokku git:sync dokku https://github.com/caillou/caillou.ch.git main --build
+    - name: Enable the letsencrypt plugin
+      dokku_letsencrypt:
+        app: *appname
         state: present
-
-    - name: Add apt repository for stable version
-      apt_repository:
-        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable
-        state: present
-
-    - name: Install Docker
-      apt:
-        name: "{{ packages }}"
-        state: present
-        update_cache: yes
-      vars:
-        packages:
-        - docker-ce
-        - docker-ce-cli
-        - containerd.io
-
-    - name: Add user to docker group
-      user:
-        name: "{{ansible_user}}"
-        group: docker
-
-    - name: Download docker-compose {{ docker_compose_version }}
-      get_url:
-        url : https://github.com/docker/compose/releases/download/{{ docker_compose_version }}/docker-compose-Linux-x86_64
-        dest: ~/docker-compose
-        mode: '+x'
-
-    - name: Check docker-compose exists
-      stat: path=~/docker-compose
-      register: docker_compose
-
-    - name: Move docker-compose to /usr/local/bin/docker-compose
-      command: mv ~/docker-compose /usr/local/bin/docker-compose
-      when: docker_compose.stat.exists
-
-    - name: Add an apt signing key for Dokku
-      apt_key:
-        url: https://packagecloud.io/dokku/dokku/gpgkey
-        state: present
-
-    - name: Add apt repository for Dokku
-      apt_repository:
-        repo: deb https://packagecloud.io/dokku/dokku/ubuntu/ focal main
-        state: present
-
-    - name: Install Dokku
-      apt:
-        name: "dokku"
-        state: present
-        update_cache: yes
