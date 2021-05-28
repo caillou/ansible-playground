@@ -16,27 +16,34 @@
     #     url: https://github.com/crisward/dokku-clone.git
       - name: letsencrypt
         url: https://github.com/dokku/dokku-letsencrypt.git
-    dokku_hostname: 'caillou.ch'
+    dokku_hostname: 'app.caillou.ch'
+    apps:
+      - name: dokku
+        repo: https://github.com/caillou/caillou.ch.git
+      - name: hello-world
+        repo: https://github.com/caillou/hello-world.html.git
+
   tasks:
     - name: create app
       dokku_app:
-        app: &appname dokku
+        app: "{{ item.name }}"
         state: present
+      loop: "{{ apps }}"
+
     - name: environment configuration
       dokku_config:
-        app: *appname
+        app: "{{ item.name }}"
         config:
           DOKKU_LETSENCRYPT_EMAIL: pierre.spring@caillou.ch
           PORT: "5000"
-    # - name: Add host with custom SSH port
-    #   known_hosts:
-    #     name: '140.82.121.3' # github.com
-    #     key: '140.82.121.3 ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEAq2A7hRGmdnm9tUDbO9IDSwBK6TbQa+PXYPCPy6rbTrTtw7PHkccKrpp0yVhp5HdEIcKr6pLlVDBfOLX9QUsyCOV0wzfjIJNlGEYsdlLJizHhbn2mUjvSAHQqZETYP81eFzLQNnPHt4EVVUh7VfDESU84KezmD5QlWpXLmvU31/yMf+Se8xhHTvKSCZIFImWwoG6mbUoWf9nzpIoaSjB+weqqUUmpaaasXVal72J+UX2B+2RPW3RcT0eOzQgqlJL3RKrTJvdsjE3JEAvGq3lGHSZXy28G3skua2SmVi/w4yCE6gbODqnTWlg7+wC604ydGXA8VJiS5ap43JXiUFFAaQ=='
-    #     path: /home/dokku/.ssh/known_hosts
-    #     state: present
+      loop: "{{ apps }}"
+
     - name: clone and build once
-      shell: dokku ps:inspect dokku || dokku git:sync dokku https://github.com/caillou/caillou.ch.git main --build
+      shell: "dokku ps:inspect {{ item.name }} || (dokku git:sync {{ item.name }} {{ item.repo }} main --build && cd /home/dokku/{{item.name}} && git config --add core.bare true)"
+      loop: "{{ apps }}"
+
     - name: Enable the letsencrypt plugin
       dokku_letsencrypt:
-        app: *appname
+        app: "{{ item.name }}"
         state: present
+      loop: "{{ apps }}"
