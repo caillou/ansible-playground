@@ -3,7 +3,7 @@
 ## Basics
 
 ```
-brew install ansible@4
+pip3 install ansible
 ```
 
 Ansible looks for a config in the following order, c.f. [Ansible Configuration Settings](https://docs.ansible.com/ansible/latest/reference_appendices/config.html) :
@@ -15,32 +15,35 @@ ANSIBLE_CONFIG # environment variable if set
 /etc/ansible/ansible.cfg
 ```
 
-This is why we create a local `ansible.cfg`:
+This is why we have a local `ansible.cfg`.
+
+You need a local `hosts` file:
 
 ```
-touch ansible.cfg
+touch hosts
 ```
 
-It contains the following
+Install the following roles:
 
 ```bash
-# ansible.cfg
-[defaults]
-# If inventory is not set, defaults to /etc/ansible/hosts.
-#
-# Relative paths are relative to the `ansible.cfg`.
-inventory = ./hosts
-
-# If no remote user is set, it defaults to the current user.
-remote_user = root
-
-# Set host_key_checking to “False” if you want to avoid host
-# key checking by the underlying tools Ansible uses to connect
-# to the host
-host_key_checking = False
+ansible-galaxy install dokku_bot.ansible_dokku
+ansible-galaxy install geerlingguy.docker
 ```
 
+Now you should be able to runn the playbook:
+
 ```
-ansible all -a "/bin/echo hello"
 ansible-playbook dokku.yaml
+```
+
+## Todo
+
+-[ ] `ansible-galaxy install -r requirements.yml`
+-[ ] use git rather than the buggy `dokku git:sync`, c.f. [registering variables with a loop](https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#registering-variables-with-a-loop)
+
+
+## Notes
+
+```bash
+ansible all -a "/bin/echo hello"
 ```
