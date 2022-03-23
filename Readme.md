@@ -38,8 +38,8 @@ ansible-playbook dokku.yaml
 
 ## Todo
 
--[ ] `ansible-galaxy install -r requirements.yml`
--[ ] use git rather than the buggy `dokku git:sync`, c.f. [registering variables with a loop](https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#registering-variables-with-a-loop)
+- [ ] `ansible-galaxy install -r requirements.yml`
+- [ ] use git rather than the buggy `dokku git:sync`, c.f. [registering variables with a loop](https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#registering-variables-with-a-loop)
 
 
 ## Notes
